@@ -145,6 +145,12 @@
         body.theme-dark .card {
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
+		#welcome-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
         
         button {
             background: var(--primary-gradient);
@@ -471,8 +477,8 @@
 <body>
 
     <main>
-        <div id="page-home" class="page active">
-            <div class="card">
+         <div id="page-home" class="page active">
+            <div class="card" id="welcome-card">
                 <div id="logo-container">
                     <img src="icon.png" alt="FusionFit Logo">
                 </div>
