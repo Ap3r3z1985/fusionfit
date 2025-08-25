@@ -313,7 +313,7 @@
             gap: 10px;
         }
         .log-item:last-child { border-bottom: none; }
-        .log-item span {
+        .log-item span, .log-item .log-item-details {
             flex-grow: 1;
             word-break: break-word;
         }
@@ -600,6 +600,7 @@
                     <input type="number" id="workout-duration" placeholder="e.g., 60">
                 </div>
                 <button id="save-workout-btn">Save Workout</button>
+                <button id="cancel-workout-edit-btn" class="secondary" style="display: none;">Cancel Edit</button>
             </div>
             <div class="card">
                 <h2>Workout Programs</h2>
@@ -607,7 +608,10 @@
                     </div>
             </div>
              <div class="card">
-                <h2>Your Logged Workouts</h2>
+                <h2>
+                    <span id="workout-log-day-title">Today's Logged Workouts</span>
+                    <input type="date" id="workout-date-picker" style="font-size: 0.8em; padding: 5px; max-width: 150px;">
+                </h2>
                 <div id="workout-history">No workouts logged yet.</div>
             </div>
         </div>
@@ -845,6 +849,14 @@
                     <label for="setting-theme">Theme</label>
                     <select id="setting-theme"><option value="light">Light</option><option value="dark">High Contrast (Dark)</option></select>
                 </div>
+<div class="form-group">
+    <label for="setting-language">Language</label>
+    <select id="setting-language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+    </select>
+</div>
+
             </div>
              <div class="card">
                 <h2>Vision Board</h2>
@@ -1015,6 +1027,8 @@
             ],
             meals: {},
             viewingMealLogKey: new Date().toISOString().split('T')[0],
+            // ⭐ NEW STATE VARIABLE
+            viewingWorkoutLogKey: new Date().toISOString().split('T')[0],
             macros: { calorieGoal: 2000, tdee: 0, ratio: 'balanced', results: { p: 0, c: 0, f: 0 } },
             hydration: { goal: 2000, step: 250, dailyLog: {} },
             progress: [],
@@ -1031,6 +1045,7 @@
         let restTimerInterval; let restTimerEnd; let activeRestTimerIndex = null;
         let workoutPrograms = {}; 
         let editingMealTimestamp = null;
+        let editingWorkoutTimestamp = null; 
 
         function groupWorkoutsByProgram() {
             const programs = {};
@@ -1052,7 +1067,6 @@
             return programs;
         }
         
-        // ⭐ NEW function to sync SVG gradient with CSS theme color
         function updateTimerGradientColor() {
             const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
             const stop1 = document.getElementById('gradient-stop-1');
@@ -1066,7 +1080,7 @@
             document.body.classList.add(`theme-${state.user.theme}`);
             document.body.classList.add(`text-size-${state.user.textSize}`);
             
-            updateTimerGradientColor(); // Update gradient on every render
+            updateTimerGradientColor();
             
             const currentPage = document.querySelector('.page.active');
             if (!currentPage || currentPage.id !== `page-${state.activePage}`) {
@@ -1268,6 +1282,7 @@
             datalist.innerHTML = [...suggestions].map(name => `<option value="${name}"></option>`).join('');
         }
 
+        // --- WORKOUTS ---
         function renderWorkouts() {
             const recommendationText = document.getElementById('recommendation-text');
             const ratio = state.macros.ratio;
@@ -1282,10 +1297,6 @@
             }
             
             const templatesContainer = document.getElementById('workout-template-list');
-            const historyContainer = document.getElementById('workout-history');
-            
-            const loggedWorkouts = state.workouts.filter(w => !isNaN(new Date(w.date)));
-            
             templatesContainer.innerHTML = `
                 <details>
                     <summary>Wrestling Prep</summary>
@@ -1313,12 +1324,40 @@
                 </details>
             `;
 
-            if (loggedWorkouts.length === 0) { historyContainer.innerHTML = 'No workouts logged yet.'; } else {
+            // ⭐ MODIFIED WORKOUT HISTORY RENDERING
+            const historyContainer = document.getElementById('workout-history');
+            const viewingKey = state.viewingWorkoutLogKey || getTodayKey();
+            
+            const loggedWorkouts = state.workouts.filter(w => {
+                const workoutDate = new Date(w.date);
+                if (isNaN(workoutDate)) return false; // Exclude templates
+                return workoutDate.toISOString().split('T')[0] === viewingKey;
+            });
+            
+            document.getElementById('workout-date-picker').value = viewingKey;
+            const todayKey = getTodayKey();
+            document.getElementById('workout-log-day-title').textContent = (viewingKey === todayKey) ? "Today's Logged Workouts" : `Workouts for ${new Date(viewingKey + 'T12:00:00').toLocaleDateString()}`;
+
+            if (loggedWorkouts.length === 0) { 
+                historyContainer.innerHTML = 'No workouts logged for this day.'; 
+            } else {
                 historyContainer.innerHTML = loggedWorkouts.slice().reverse().map(w => {
                     const d = new Date(w.date);
                     const displayDate = d.toLocaleDateString();
                     const details = w.duration ? `<p style="margin: 5px 0;">Duration: ${w.duration} min | Est. Burn: ${Math.round(w.caloriesBurned)} kcal</p>` : '';
-                    return `<div class="log-item"><strong>${displayDate}</strong>${details}<ul>${w.exercises.map(ex => `<li><strong>${ex.name}</strong>: ${ex.sets.map(s => `${s.reps || 0}x ${s.weight || 0}lbs`).join(', ')}${ex.notes ? `<br><small><em>Notes: ${ex.notes}</em></small>` : ''}</li>`).join('')}</ul></div>`;
+                    const title = w.templateName === 'Custom' || !w.templateName ? `Workout @ ${d.toLocaleTimeString()}` : `${w.templateName.split(' - ').slice(1).join(' ')}`;
+                    
+                    return `<div class="log-item">
+                                <div class="log-item-details">
+                                    <strong>${title}</strong>
+                                    ${details}
+                                    <ul>${w.exercises.map(ex => `<li><strong>${ex.name}</strong>: ${ex.sets.map(s => `${s.reps || 0}x ${s.weight || 0}lbs`).join(', ')}${ex.notes ? `<br><small><em>Notes: ${ex.notes}</em></small>` : ''}</li>`).join('')}</ul>
+                                </div>
+                                <div class="log-item-actions">
+                                    <button class="edit-workout-btn secondary" data-date="${w.date}">Edit</button>
+                                    <button class="delete-workout-btn secondary" data-date="${w.date}">Del</button>
+                                </div>
+                           </div>`;
                 }).join('');
             }
             populateExerciseSuggestions();
@@ -1330,6 +1369,15 @@
             });
         }
         
+        function resetWorkoutForm() {
+            editingWorkoutTimestamp = null;
+            newWorkout = { exercises: [] };
+            document.getElementById('workout-duration').value = '';
+            document.getElementById('save-workout-btn').textContent = 'Save Workout';
+            document.getElementById('cancel-workout-edit-btn').style.display = 'none';
+            renderNewWorkoutForm();
+        }
+
         function renderNewWorkoutForm() {
             document.getElementById('exercise-list').innerHTML = newWorkout.exercises.map((ex, i) => `<div class="card" data-ex-index="${i}" style="border-left:3px solid var(--accent-color);"><input type="text" class="exercise-name" value="${ex.name||''}" placeholder="Exercise Name" list="exercise-suggestions"><div class="sets-container">${ex.sets.map((s,si) => `<div class="form-group" data-set-index="${si}">Set ${si+1}: <input type="number" class="reps" value="${s.reps||''}" placeholder="Reps"> x <input type="number" class="weight" value="${s.weight||''}" placeholder="Weight (lbs)"></div>`).join('')}</div><div style="display:flex; gap:10px;"><button class="add-set-btn secondary" style="flex:1;">Add Set</button><button class="start-rest-btn secondary" style="flex:1;">Start 60s Rest</button></div><div class="rest-timer" id="rest-timer-${i}"></div><textarea class="exercise-notes" placeholder="Notes">${ex.notes||''}</textarea></div>`).join('');
         }
@@ -1388,7 +1436,7 @@
             if (e.target.classList.contains('exercise-name')) ex.name = e.target.value; if (e.target.classList.contains('exercise-notes')) ex.notes = e.target.value;
             if (e.target.classList.contains('reps') || e.target.classList.contains('weight')) { const si = e.target.closest('.form-group').dataset.setIndex; const set = ex.sets[si]; if (e.target.classList.contains('reps')) set.reps = e.target.value; if (e.target.classList.contains('weight')) set.weight = e.target.value; }
         });
-        document.getElementById('save-workout-btn').addEventListener('click', () => {
+		document.getElementById('save-workout-btn').addEventListener('click', () => {
             const duration = parseInt(document.getElementById('workout-duration').value, 10) || 0;
             if (duration <= 0) {
                 alert('Please enter a valid workout duration in minutes.');
@@ -1404,24 +1452,85 @@
             const MET_VALUE = 6.0; // Vigorous weightlifting
             const caloriesBurned = (MET_VALUE * weightKg * 3.5) / 200 * duration;
             
-            if (newWorkout.exercises.some(ex => ex.name)) {
+            const finalExercises = newWorkout.exercises.filter(ex => ex.name);
+            if (finalExercises.length === 0) {
+                alert('Please add at least one exercise.');
+                return;
+            }
+
+            if (editingWorkoutTimestamp) {
+                // UPDATE logic
+                const workoutToUpdate = state.workouts.find(w => w.date === editingWorkoutTimestamp);
+                if (workoutToUpdate) {
+                    workoutToUpdate.exercises = finalExercises;
+                    workoutToUpdate.duration = duration;
+                    workoutToUpdate.caloriesBurned = caloriesBurned;
+                }
+                 alert('Workout updated!');
+            } else {
+                // ⭐ MODIFIED ADD LOGIC FOR CALENDAR
+                const viewingKey = state.viewingWorkoutLogKey || getTodayKey();
+                // Combine the selected date with the current time to create a unique timestamp for that day
+                const newTimestamp = new Date(viewingKey + 'T' + new Date().toTimeString().split(' ')[0]).toISOString();
+
                 const workoutToSave = { 
-                    date: new Date().toISOString(), 
-                    exercises: newWorkout.exercises.filter(ex => ex.name), 
+                    date: newTimestamp, 
+                    exercises: finalExercises,
                     duration, 
                     caloriesBurned,
                     templateName: newWorkout.templateName || 'Custom'
                 };
                 state.workouts.push(workoutToSave);
-                newWorkout = { exercises: [] };
-                document.getElementById('workout-duration').value = '';
-                saveState();
-                render();
                 alert('Workout saved!');
-            } else {
-                alert('Please add at least one exercise.');
+            }
+            
+            resetWorkoutForm();
+            saveState();
+            render();
+        });
+
+        document.getElementById('cancel-workout-edit-btn').addEventListener('click', resetWorkoutForm);
+        
+        document.getElementById('workout-history').addEventListener('click', e => {
+            const date = e.target.dataset.date;
+            if (!date) return;
+
+            if (e.target.classList.contains('delete-workout-btn')) {
+                if (confirm('Are you sure you want to delete this workout log?')) {
+                    state.workouts = state.workouts.filter(w => w.date !== date);
+                    saveState();
+                    render();
+                }
+            }
+
+            if (e.target.classList.contains('edit-workout-btn')) {
+                const workoutToEdit = state.workouts.find(w => w.date === date);
+                if (workoutToEdit) {
+                    editingWorkoutTimestamp = date;
+                    newWorkout = JSON.parse(JSON.stringify(workoutToEdit));
+                    
+                    document.getElementById('workout-duration').value = workoutToEdit.duration || '';
+                    document.getElementById('save-workout-btn').textContent = 'Update Workout';
+                    document.getElementById('cancel-workout-edit-btn').style.display = 'inline-block';
+                    
+                    renderNewWorkoutForm();
+                    document.querySelector('#page-workouts .card h2').scrollIntoView({ behavior: 'smooth' });
+                }
             }
         });
+
+        // ⭐ NEW EVENT LISTENER FOR WORKOUT CALENDAR
+        document.getElementById('workout-date-picker').addEventListener('change', (e) => {
+            if (e.target.value) {
+                state.viewingWorkoutLogKey = e.target.value;
+                // If user is editing a workout and changes the date, cancel the edit to avoid confusion.
+                if (editingWorkoutTimestamp) {
+                    resetWorkoutForm();
+                }
+                render();
+            }
+        });
+
 
         const programSelect = document.getElementById('program-select');
         const daySelect = document.getElementById('day-select');
@@ -1550,13 +1659,14 @@
                 }
             } else {
                 // ADD logic
+                 const newTimestamp = new Date(viewingKey + 'T' + new Date().toTimeString().split(' ')[0]).toISOString();
                 const newMeal = { 
                     name: document.getElementById('meal-name').value, 
                     calories: document.getElementById('meal-calories').value, 
                     protein: document.getElementById('meal-protein').value, 
                     carbs: document.getElementById('meal-carbs').value, 
                     fats: document.getElementById('meal-fats').value, 
-                    timestamp: new Date().toISOString() 
+                    timestamp: newTimestamp
                 };
                 state.meals[viewingKey].push(newMeal);
             }
@@ -1863,7 +1973,205 @@
         if (state.ifTimer.isActive) { timerInterval = setInterval(renderTimer, 1000); }
         render();
         handleOnboarding();
-    });
+    
+/* ====== Simple i18n (EN <-> ES) – no structural changes required ====== */
+const I18N_MAP = {
+  "Home":"Inicio",
+  "Workouts":"Entrenamientos",
+  "Meals":"Comidas",
+  "Progress":"Progreso",
+  "More":"Más",
+  "Timer":"Temporizador",
+  "Macros":"Macros",
+  "Water":"Agua",
+  "Journal":"Diario",
+  "Guides":"Guías",
+  "Settings":"Configuraciones",
+  "Close":"Cerrar",
+  "Welcome,":"Bienvenido,",
+  "Today's Snapshot":"Resumen de Hoy",
+  "Calories Remaining":"Calorías Restantes",
+  "Hydration":"Hidratación",
+  "My Vision":"Mi Visión",
+  "Today's Recommended Workout":"Entrenamiento Recomendado de Hoy",
+  "Calculating...":"Calculando...",
+  "Intermittent Fasting":"Ayuno Intermitente",
+  "Select a fast to begin":"Selecciona un ayuno para comenzar",
+  "Custom Start Time (optional)":"Hora de inicio personalizada (opcional)",
+  "Start 16:8":"Iniciar 16:8",
+  "Start 18:6":"Iniciar 18:6",
+  "Stop":"Detener",
+  "Workouts":"Entrenamientos",
+  "Recommended For You":"Recomendado para ti",
+  "Select a diet plan on the 'Macros' page to see personalized workout advice here.":"Selecciona un plan de dieta en la página 'Macros' para ver recomendaciones personalizadas de entrenamiento aquí.",
+  "Log New Workout":"Registrar nuevo entrenamiento",
+  "Start from a Template":"Comenzar desde una plantilla",
+  "Choose Program":"Elegir programa",
+  "-- Select a Program --":"-- Selecciona un programa --",
+  "Choose Day":"Elegir día",
+  "-- Select Program First --":"-- Selecciona primero un programa --",
+  "Load Selected Workout":"Cargar entrenamiento seleccionado",
+  "Add Exercise":"Agregar ejercicio",
+  "Workout Duration (minutes)":"Duración del entrenamiento (minutos)",
+  "Save Workout":"Guardar entrenamiento",
+  "Workout Programs":"Programas de entrenamiento",
+  "Your Logged Workouts":"Tus entrenamientos registrados",
+  "No workouts logged yet.":"Aún no hay entrenamientos registrados.",
+  "Meals":"Comidas",
+  "Quick Add":"Añadir rápido",
+  "Meal Ideas (Quick Select)":"Ideas de comida (selección rápida)",
+  "Food / Meal":"Comida / Platillo",
+  "Total Calories":"Calorías totales",
+  "Protein (g)":"Proteínas (g)",
+  "Carbs (g)":"Carbohidratos (g)",
+  "Fats (g)":"Grasas (g)",
+  "Add Meal":"Agregar comida",
+  "Cancel Edit":"Cancelar edición",
+  "Today's Log":"Registro de hoy",
+  "Goal":"Meta",
+  "Eaten":"Consumidas",
+  "Burned":"Quemadas",
+  "Remaining":"Restantes",
+  "No meals added for today.":"No hay comidas agregadas para hoy.",
+  "Macros Remaining":"Macronutrientes Restantes",
+  "Macro Calculator":"Calculadora de Macros",
+  "1. Estimate Maintenance Calories":"1. Estimar calorías de mantenimiento",
+  "Select Your Activity Level":"Selecciona tu nivel de actividad",
+  "Sedentary (little or no exercise)":"Sedentario (poco o ningún ejercicio)",
+  "Lightly Active (exercise 1-3 days/week)":"Ligera actividad (ejercicio 1-3 días/semana)",
+  "Moderately Active (exercise 3-5 days/week)":"Actividad moderada (ejercicio 3-5 días/semana)",
+  "Very Active (exercise 6-7 days/week)":"Muy activo (ejercicio 6-7 días/semana)",
+  "Estimate My Calories":"Estimar mis calorías",
+  "Maintenance Calories:":"Calorías de mantenimiento:",
+  "Requires Body Stats to be set on the Settings page.":"Requiere establecer los datos corporales en la página de Configuraciones.",
+  "2. Set Your Goal & Calculate":"2. Establece tu objetivo y calcula",
+  "Choose Your Weight Goal":"Elige tu objetivo de peso",
+  "Maintain Weight":"Mantener peso",
+  "Mild Weight Loss (~1 lb/week)":"Pérdida leve (~1 lb/semana)",
+  "Weight Loss (~2 lbs/week)":"Pérdida de peso (~2 lb/semana)",
+  "Aggressive Loss (~3 lbs/week)":"Pérdida agresiva (~3 lb/semana)",
+  "Your Final Daily Calorie Goal":"Tu meta diaria final de calorías",
+  "Choose Your Diet Plan":"Elige tu plan de dieta",
+  "Balanced (40C/30P/30F)":"Equilibrado (40C/30P/30G)",
+  "Low Carb (25C/40P/35F)":"Bajo en carbos (25C/40P/35G)",
+  "Toning / High Protein (30C/45P/25F)":"Tono / Alta proteína (30C/45P/25G)",
+  "Slow-Carb (4-Hour Body)":"Slow-Carb (4-Hour Body)",
+  "Your Daily Macro Goals":"Tus metas diarias de macros",
+  "Protein":"Proteínas",
+  "Carbs":"Carbohidratos",
+  "Fats":"Grasas",
+  "Hydration":"Hidratación",
+  "Today's Progress":"Progreso de hoy",
+  "Daily Goal (ml)":"Meta diaria (ml)",
+  "Step Size (ml)":"Tamaño de paso (ml)",
+  "Save":"Guardar",
+  "Progress":"Progreso",
+  "Log Entry":"Agregar registro",
+  "Weight (lbs)":"Peso (lb)",
+  "Waist (in)":"Cintura (in)",
+  "Chest (in)":"Pecho (in)",
+  "Hips (in)":"Caderas (in)",
+  "Thigh (in)":"Muslo (in)",
+  "Arm (in)":"Brazo (in)",
+  "Log Progress":"Guardar progreso",
+  "Trend Chart":"Gráfica de tendencia",
+  "History":"Historial",
+  "No progress logged yet.":"Aún no hay progreso registrado.",
+  "Daily Journal":"Diario diario",
+  "Today's Entry":"Entrada de hoy",
+  "Log your thoughts, mood, energy levels, or anything else...":"Anota tus pensamientos, estado de ánimo, niveles de energía, o lo que sea...",
+  "Save Entry":"Guardar entrada",
+  "Past Entries":"Entradas anteriores",
+  "No entries yet.":"Aún no hay entradas.",
+  "Guidebook":"Guía",
+  "Workout Guides":"Guías de entrenamiento",
+  "How to Measure":"Cómo medir",
+  "Nutrition Guides":"Guías de nutrición",
+  "Recovery Guides":"Guías de recuperación",
+  "Personalization":"Personalización",
+  "Your Name":"Tu nombre",
+  "Text Size":"Tamaño de texto",
+  "Small":"Pequeño",
+  "Medium":"Mediano",
+  "Large":"Grande",
+  "Theme":"Tema",
+  "High Contrast (Dark)":"Alto contraste (Oscuro)",
+  "Vision Board":"Tablero de visión",
+  "Motivational Text / Mantra":"Texto motivacional / Mantra",
+  "Vision Image":"Imagen de visión",
+  "Body Stats":"Estadísticas corporales",
+  "Age":"Edad",
+  "Gender":"Género",
+  "Female":"Mujer",
+  "Male":"Hombre",
+  "Height":"Altura",
+  "Current Weight (lbs)":"Peso actual (lb)",
+  "Updated automatically from your latest Progress Log entry.":"Actualizado automáticamente desde tu último registro de progreso.",
+  "Save All Settings":"Guardar todas las configuraciones",
+  "Data Management":"Gestión de datos",
+  "Backup or restore all your app data.":"Haz copia de seguridad o restaura todos tus datos de la app.",
+  "Export Data":"Exportar datos",
+  "Import Data":"Importar datos",
+  "Feedback & Support":"Comentarios y soporte",
+  "Have a bug to report or an idea for a new feature? Let us know!":"¿Tienes un error o una idea de función? ¡Cuéntanos!",
+  "Submit Feedback":"Enviar comentarios",
+  "Request a Feature":"Pedir una función"
+};
+
+function applyTranslations(lang) {
+  if (lang !== 'es') {
+    // Restore original English by reloading from original strings stored once
+    if (window.__ORIG_TEXT__) {
+      for (const [el, txt] of window.__ORIG_TEXT__) el.textContent = txt;
+    }
+    return;
+  }
+  if (!window.__ORIG_TEXT__) {
+    // Save original visible texts (one-time)
+    window.__ORIG_TEXT__ = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.firstElementChild) continue; // likely a container; we'll rely on leaf nodes
+      const txt = (node.textContent || '').trim();
+      if (!txt) continue;
+      window.__ORIG_TEXT__.push([node, node.textContent]);
+    }
+  }
+  // Translate leaf elements whose trimmed text has a mapping
+  window.__ORIG_TEXT__.forEach(([el, original]) => {
+    const key = original.trim();
+    if (I18N_MAP[key]) {
+      el.textContent = el.textContent.replace(key, I18N_MAP[key]);
+    }
+  });
+}
+// Initialize dropdown from saved pref and translate on load
+const langSelect = document.getElementById('setting-language');
+let savedLang = localStorage.getItem('appLang') || 'en';
+if (langSelect) langSelect.value = savedLang;
+applyTranslations(savedLang);
+
+// Update on save settings OR when user changes dropdown
+if (langSelect) {
+  langSelect.addEventListener('change', () => {
+    const val = langSelect.value;
+    localStorage.setItem('appLang', val);
+    applyTranslations(val);
+  });
+}
+
+// Also hook Save Settings button to enforce translation immediately after saving
+const saveBtn = document.getElementById('save-settings-btn');
+if (saveBtn) {
+  saveBtn.addEventListener('click', () => {
+    const val = langSelect ? langSelect.value : 'en';
+    localStorage.setItem('appLang', val);
+    applyTranslations(val);
+  });
+}
+/* ====== End i18n block ====== */
+});
     </script>
 </body>
 </html>
