@@ -363,15 +363,6 @@
         .macro-result-item small {
             opacity: 0.8;
         }
-        .rest-timer {
-            font-weight: 600;
-            font-size: 1.2em;
-            color: var(--accent-color);
-            text-align: center;
-            margin-top: 10px;
-            height: 2em; /* Reserve space to prevent layout shift */
-            line-height: 2em;
-        }
         .summary-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -471,6 +462,14 @@
         #timer-end-time {
             display: none; /* Replaced by #timer-status */
         }
+
+        /* --- Rep Timer --- */
+        .rep-timer {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
         
     </style>
 </head>
@@ -563,6 +562,13 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="card">
+                <h2>Fasting History</h2>
+                <div id="fasting-history-list">
+                    <p>Your completed fasts will appear here.</p>
+                </div>
+            </div>
         </div>
 
         <div id="page-workouts" class="page">
@@ -625,6 +631,25 @@
                         <label for="meal-preset-select">Meal Ideas (Quick Select)</label>
                         <select id="meal-preset-select">
                             <option value="" disabled selected>-- Select a Meal Idea --</option>
+                             <optgroup label="Chipotle Menu">
+                                <option value="Chicken Bowl|650|40|60|25">Chicken Bowl (Rice, Beans, Salsa)</option>
+                                <option value="Steak Bowl|700|35|65|30">Steak Bowl (Rice, Beans, Sour Cream)</option>
+                                <option value="Sofritas Veggie Bowl|750|15|85|35">Sofritas Veggie Bowl (Guac)</option>
+                                <option value="Keto Steak Bowl|550|30|15|40">Keto Steak Bowl (Greens, Guac)</option>
+                            </optgroup>
+                            <optgroup label="CAVA Menu">
+                                <option value="Spicy Lamb + Avocado Bowl|795|45|60|40">Spicy Lamb + Avocado Bowl</option>
+                                <option value="Falafel Crunch Bowl|860|25|90|45">Falafel Crunch Bowl</option>
+                                <option value="Steak + Harissa Bowl|615|40|55|25">Steak + Harissa Bowl</option>
+                                <option value="Chicken + Rice Bowl|710|50|65|28">Chicken + Rice Bowl</option>
+                                <option value="Harissa Avocado Bowl|840|48|70|42">Harissa Avocado Bowl</option>
+                                <option value="Greek Salad Bowl|585|45|30|35">Greek Salad Bowl</option>
+                                <option value="Garlic Chicken + Veggie Pita|790|55|75|30">Garlic Chicken + Veggie Pita</option>
+                                <option value="Steak + Feta Pita|805|50|70|38">Steak + Feta Pita</option>
+                                <option value="Crispy Falafel Pita|945|30|100|50">Crispy Falafel Pita</option>
+                                <option value="Spicy Chicken + Avocado Pita|970|52|85|45">Spicy Chicken + Avocado Pita</option>
+                                <option value="Greek Chicken Pita|870|58|80|35">Greek Chicken Pita</option>
+                            </optgroup>
                             <optgroup label="Slow-Carb Diet Examples"><option value="Eggs, Spinach & Lentils|450|35|30|20">Eggs, Spinach & Lentils</option><option value="Beef with Mixed Vegetables|550|45|15|35">Beef with Mixed Vegetables</option><option value="Chicken Thighs with Black Beans|500|40|40|20">Chicken Thighs with Black Beans</option><option value="Pork Chop w/ Asparagus|450|50|8|25">Pork Chop w/ Asparagus</option><option value="Cheat Day Meal|0|0|0|0">Cheat Day Meal (No Tracking)</option></optgroup>
                              <optgroup label="High Protein / Toning"><option value="Protein Shake (1 scoop powder)|250|40|5|5">Protein Shake</option><option value="Chicken & Quinoa Power Bowl|500|45|55|13">Chicken & Quinoa Power Bowl</option><option value="Salmon with Roasted Asparagus|450|40|10|28">Salmon with Roasted Asparagus</option><option value="Egg White Omelet w/ Turkey Bacon|300|35|10|15">Egg White Omelet</option><option value="Greek Yogurt w/ Berries|180|20|15|5">Greek Yogurt w/ Berries</option></optgroup>
                             <optgroup label="Low Carb / Keto"><option value="Avocado with Fried Eggs|350|15|5|30">Avocado with Fried Eggs</option><option value="Lettuce Wrap Burger|400|30|8|28">Lettuce Wrap Burger</option><option value="Zucchini Noodles w/ Pesto & Chicken|450|40|12|28">Zucchini Noodles with Pesto</option><option value="Steak with Cauliflower Mash|600|50|15|38">Steak with Cauliflower Mash</option></optgroup>
@@ -652,6 +677,14 @@
                     <div><strong>Eaten</strong><span id="calorie-summary-eaten">0</span></div>
                     <div><strong>Burned</strong><span id="calorie-summary-burned">0</span></div>
                     <div><strong>Remaining</strong><span id="calorie-summary-remaining">0</span></div>
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="steps-walked-input">Steps Walked Today</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="steps-walked-input" placeholder="e.g., 10000" style="margin: 0;">
+                        <button id="save-steps-btn" style="padding: 10px 15px;">Save</button>
+                    </div>
+                    <small>Calories Burned from Steps: <strong id="steps-calories-burned">0</strong> kcal</small>
                 </div>
                 <hr style="border-color: var(--border-color); margin-bottom: 20px;">
                 <div id="daily-meals-list" style="margin-bottom: 20px;">No meals added for today.</div>
@@ -909,7 +942,7 @@
                 </div>
             </div>
             </div>
-    </main>
+			</main>
     
     <div id="onboarding-overlay" style="display: none;">
         <div id="onboarding-modal">
@@ -1006,6 +1039,7 @@
         const defaultState = {
             user: { name: 'User', textSize: 'medium', theme: 'light', age: 20, gender: 'female', height: 65, visionText: '', visionImage: '' }, /* height in inches */
             ifTimer: { startTime: null, preset: '16:8', endTime: null, isActive: false },
+            fastingHistory: [],
             workouts: [ 
                 { date: "PPL - Push Day", exercises: [ { name: "Dumbbell Bench Press", sets: [{ reps: 10, weight: 20 }, { reps: 10, weight: 20 }, { reps: 10, weight: 20 }], notes: "Focus on squeezing the chest." }, { name: "Dumbbell Overhead Press", sets: [{ reps: 10, weight: 15 }, { reps: 8, weight: 15 }, { reps: 8, weight: 15 }], notes: "Keep core tight, don't arch back." }, { name: "Incline Push-ups", sets: [{ reps: 15, weight: 0 }, { reps: 15, weight: 0 }, { reps: 15, weight: 0 }], notes: "Go to failure if you can. Lower incline to make it harder." }, { name: "Lateral Raises", sets: [{ reps: 15, weight: 10 }, { reps: 15, weight: 10 }, { reps: 15, weight: 10 }], notes: "Don't use momentum. Lead with the elbows." }, { name: "Tricep Dips (on bench)", sets: [{ reps: 12, weight: 0 }, { reps: 12, weight: 0 }, { reps: 12, weight: 0 }], notes: "Keep your back close to the bench." } ] }, 
                 { date: "PPL - Pull Day", exercises: [ { name: "Dumbbell Rows", sets: [{ reps: 10, weight: 25 }, { reps: 10, weight: 25 }, { reps: 10, weight: 25 }], notes: "Pull towards your hip, not your shoulder." }, { name: "Pull-ups (or Assisted/Negatives)", sets: [{ reps: 5, weight: 0 }, { reps: 5, weight: 0 }, { reps: 5, weight: 0 }], notes: "Go to failure. Use a band or jump down slowly if needed." }, { name: "Dumbbell Romanian Deadlifts", sets: [{ reps: 12, weight: 20 }, { reps: 12, weight: 20 }, { reps: 12, weight: 20 }], notes: "Feel the stretch in your hamstrings. Keep back straight." }, { name: "Bicep Curls", sets: [{ reps: 12, weight: 15 }, { reps: 12, weight: 15 }, { reps: 12, weight: 15 }], notes: "Don't swing. Control the movement up and down." } ] }, 
@@ -1027,8 +1061,8 @@
             ],
             meals: {},
             viewingMealLogKey: new Date().toISOString().split('T')[0],
-            // ⭐ NEW STATE VARIABLE
             viewingWorkoutLogKey: new Date().toISOString().split('T')[0],
+            stepsLog: {},
             macros: { calorieGoal: 2000, tdee: 0, ratio: 'balanced', results: { p: 0, c: 0, f: 0 } },
             hydration: { goal: 2000, step: 250, dailyLog: {} },
             progress: [],
@@ -1042,10 +1076,54 @@
         
         const motivationalQuotes = [ "The only bad workout is the one that didn't happen.", "Strive for progress, not perfection.", "The body achieves what the mind believes.", "Push yourself, because no one else is going to do it for you.", "Your only limit is you." ];
         let timerInterval;
-        let restTimerInterval; let restTimerEnd; let activeRestTimerIndex = null;
+        
+        // --- NEW: Audio Context for Beeps ---
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        // Add event listener to initialize audio on first user interaction
+        document.body.addEventListener('click', initAudio, { once: true });
+        document.body.addEventListener('touchstart', initAudio, { once: true });
+
+
+        function playBeep(frequency = 880, duration = 100) {
+            if (!audioCtx) return; // Audio not initialized
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
+
+            oscillator.start(audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + (duration / 1000));
+            oscillator.stop(audioCtx.currentTime + (duration / 1000));
+        }
+
+
+        // --- MODIFIED: Rest Timer Variables & Functions ---
+        let repTimers = {}; // Object to hold multiple timer states
+
         let workoutPrograms = {}; 
         let editingMealTimestamp = null;
         let editingWorkoutTimestamp = null; 
+
+        function calculateStepsCalories(steps) {
+            if (!steps || steps <= 0) return 0;
+            const latestWeight = state.progress.length > 0 ? state.progress[state.progress.length - 1].weight : null;
+            if (!latestWeight) return 0;
+            const caloriesPerMile = latestWeight * 0.57;
+            const milesWalked = steps / 2000;
+            return Math.round(caloriesPerMile * milesWalked);
+        }
 
         function groupWorkoutsByProgram() {
             const programs = {};
@@ -1166,8 +1244,14 @@
             const todayKey = getTodayKey();
             const todaysMeals = state.meals[todayKey] || [];
             const consumedCalories = todaysMeals.reduce((sum, meal) => sum + (Number(meal.calories) || 0), 0);
+            
             const todaysWorkouts = state.workouts.filter(w => !isNaN(new Date(w.date)) && new Date(w.date).toISOString().split('T')[0] === todayKey);
-            const caloriesBurned = todaysWorkouts.reduce((sum, w) => sum + (Number(w.caloriesBurned) || 0), 0);
+            const workoutCalories = todaysWorkouts.reduce((sum, w) => sum + (Number(w.caloriesBurned) || 0), 0);
+            
+            const todaysSteps = state.stepsLog[todayKey] || 0;
+            const stepCalories = calculateStepsCalories(todaysSteps);
+
+            const caloriesBurned = workoutCalories + stepCalories;
             const caloriesRemaining = state.macros.calorieGoal - consumedCalories + Math.round(caloriesBurned);
             document.getElementById('summary-calories').textContent = caloriesRemaining;
             
@@ -1211,7 +1295,7 @@
             const timerDisplay = document.getElementById('timer-display');
             const timerStatus = document.getElementById('timer-status');
             const remainingPath = document.getElementById('timer-path-remaining');
-            const FULL_DASH_ARRAY = 283; // Circumference of a circle with r=45 (2 * PI * 45)
+            const FULL_DASH_ARRAY = 283;
 
             if (state.ifTimer.isActive && state.ifTimer.endTime && state.ifTimer.startTime) {
                 const now = new Date().getTime();
@@ -1223,8 +1307,8 @@
                 if (diff <= 0) {
                     timerDisplay.textContent = 'Done!';
                     timerStatus.textContent = 'Fast Complete';
-                    remainingPath.style.strokeDashoffset = 0; // Full circle
-                    stopTimer(); // Call stop timer to clean up interval
+                    remainingPath.style.strokeDashoffset = 0;
+                    stopTimer();
                 } else {
                     const h = Math.floor(diff / 36e5);
                     const m = Math.floor((diff % 36e5) / 6e4);
@@ -1240,7 +1324,33 @@
             } else {
                 timerDisplay.textContent = '--:--:--';
                 timerStatus.textContent = 'Select a fast to begin';
-                remainingPath.style.strokeDashoffset = FULL_DASH_ARRAY; // Empty circle
+                remainingPath.style.strokeDashoffset = FULL_DASH_ARRAY;
+            }
+
+            const historyContainer = document.getElementById('fasting-history-list');
+            if (state.fastingHistory && state.fastingHistory.length > 0) {
+                historyContainer.innerHTML = state.fastingHistory
+                    .slice()
+                    .reverse()
+                    .map(fast => {
+                        const startDate = new Date(fast.startTime);
+                        const endDate = new Date(fast.endTime);
+                        const durationMs = endDate - startDate;
+
+                        const totalHours = Math.floor(durationMs / 3600000);
+                        const totalMinutes = Math.round((durationMs % 3600000) / 60000);
+                        
+                        const dateString = startDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+                        return `
+                            <div class="log-item">
+                                <span><strong>${dateString}:</strong> ${totalHours}h ${totalMinutes}m</span>
+                                <small>${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
+                            </div>
+                        `;
+                    }).join('');
+            } else {
+                historyContainer.innerHTML = '<p>Your completed fasts will appear here.</p>';
             }
         }
 
@@ -1254,16 +1364,24 @@
             state.ifTimer.isActive = true;
             
             clearInterval(timerInterval);
-            renderTimer(); // Render immediately
+            renderTimer();
             timerInterval = setInterval(renderTimer, 1000);
             saveState();
         }
 
         function stopTimer() {
+            if (state.ifTimer.isActive && state.ifTimer.startTime) {
+                const completedFast = {
+                    startTime: state.ifTimer.startTime,
+                    endTime: new Date().toISOString(),
+                };
+                state.fastingHistory.push(completedFast);
+            }
+
             state.ifTimer.isActive = false;
             clearInterval(timerInterval);
             saveState();
-            renderTimer(); // Rerender to show the stopped state
+            renderTimer();
         }
         
         document.getElementById('start-16-8').addEventListener('click', () => startTimer(16));
@@ -1324,13 +1442,12 @@
                 </details>
             `;
 
-            // ⭐ MODIFIED WORKOUT HISTORY RENDERING
             const historyContainer = document.getElementById('workout-history');
             const viewingKey = state.viewingWorkoutLogKey || getTodayKey();
             
             const loggedWorkouts = state.workouts.filter(w => {
                 const workoutDate = new Date(w.date);
-                if (isNaN(workoutDate)) return false; // Exclude templates
+                if (isNaN(workoutDate)) return false;
                 return workoutDate.toISOString().split('T')[0] === viewingKey;
             });
             
@@ -1375,42 +1492,77 @@
             document.getElementById('workout-duration').value = '';
             document.getElementById('save-workout-btn').textContent = 'Save Workout';
             document.getElementById('cancel-workout-edit-btn').style.display = 'none';
+            Object.values(repTimers).forEach(timer => clearInterval(timer.interval));
+            repTimers = {};
             renderNewWorkoutForm();
         }
 
         function renderNewWorkoutForm() {
-            document.getElementById('exercise-list').innerHTML = newWorkout.exercises.map((ex, i) => `<div class="card" data-ex-index="${i}" style="border-left:3px solid var(--accent-color);"><input type="text" class="exercise-name" value="${ex.name||''}" placeholder="Exercise Name" list="exercise-suggestions"><div class="sets-container">${ex.sets.map((s,si) => `<div class="form-group" data-set-index="${si}">Set ${si+1}: <input type="number" class="reps" value="${s.reps||''}" placeholder="Reps"> x <input type="number" class="weight" value="${s.weight||''}" placeholder="Weight (lbs)"></div>`).join('')}</div><div style="display:flex; gap:10px;"><button class="add-set-btn secondary" style="flex:1;">Add Set</button><button class="start-rest-btn secondary" style="flex:1;">Start 60s Rest</button></div><div class="rest-timer" id="rest-timer-${i}"></div><textarea class="exercise-notes" placeholder="Notes">${ex.notes||''}</textarea></div>`).join('');
+            document.getElementById('exercise-list').innerHTML = newWorkout.exercises.map((ex, i) => {
+                const timerId = `rep-timer-${i}`;
+                
+                return `<div class="card" data-ex-index="${i}" style="border-left:3px solid var(--accent-color);">
+                            <input type="text" class="exercise-name" value="${ex.name||''}" placeholder="Exercise Name" list="exercise-suggestions">
+                            <div class="sets-container">
+                                ${ex.sets.map((s,si) => `
+                                    <div class="form-group" data-set-index="${si}">
+                                        Set ${si+1}: 
+                                        <input type="number" class="reps" value="${s.reps||''}" placeholder="Reps"> x 
+                                        <input type="number" class="weight" value="${s.weight||''}" placeholder="Weight (lbs)">
+                                        <span class="rep-timer" id="${timerId}-${si}"></span>
+                                    </div>`).join('')}
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <button class="add-set-btn secondary" style="flex:1;">Add Set</button>
+                                <button class="start-rest-btn secondary" style="flex:1;" data-timer-id-prefix="${timerId}">Start 60s Rest</button>
+                            </div>
+                            <textarea class="exercise-notes" placeholder="Notes">${ex.notes||''}</textarea>
+                        </div>`;
+            }).join('');
         }
         
-        function startRestTimer(exerciseIndex) {
-            clearInterval(restTimerInterval);
-            restTimerEnd = Date.now() + 60 * 1000;
-            activeRestTimerIndex = exerciseIndex;
-            document.querySelectorAll('.rest-timer').forEach((el, index) => {
-                if (index !== activeRestTimerIndex) el.innerHTML = '';
-            });
-            restTimerInterval = setInterval(updateRestTimerDisplay, 500);
-            updateRestTimerDisplay();
+        function startRepTimer(timerIdPrefix, setIndex, duration = 60) {
+            const timerId = `${timerIdPrefix}-${setIndex}`;
+            
+            if (repTimers[timerId]) {
+                clearInterval(repTimers[timerId].interval);
+            }
+
+            repTimers[timerId] = {
+                remaining: duration,
+                interval: setInterval(() => updateRepTimer(timerId), 1000)
+            };
+            updateRepTimer(timerId);
         }
 
-        function updateRestTimerDisplay() {
-            if (!restTimerEnd) return;
-            const remaining = Math.round((restTimerEnd - Date.now()) / 1000);
-            const timerEl = document.getElementById(`rest-timer-${activeRestTimerIndex}`);
-            if (!timerEl) {
-                clearInterval(restTimerInterval);
+        function updateRepTimer(timerId) {
+            const timerEl = document.getElementById(timerId);
+            if (!timerEl || !repTimers[timerId]) {
+                if(repTimers[timerId]) clearInterval(repTimers[timerId].interval);
+                delete repTimers[timerId];
                 return;
             }
+
+            repTimers[timerId].remaining--;
+            const remaining = repTimers[timerId].remaining;
+
             if (remaining <= 0) {
-                clearInterval(restTimerInterval);
                 timerEl.textContent = "Rest Complete!";
+                clearInterval(repTimers[timerId].interval);
+                playBeep(1000, 200);
+                setTimeout(() => { if(timerEl) timerEl.textContent = ''; }, 3000);
+                delete repTimers[timerId];
             } else {
-                const secs = remaining % 60;
-                timerEl.textContent = `Resting: 0:${String(secs).padStart(2, '0')}`;
+                timerEl.textContent = `Rest: ${remaining}s`;
+                if (remaining <= 5) {
+                    playBeep();
+                }
             }
         }
 
+
         document.getElementById('add-exercise-btn').addEventListener('click', () => { newWorkout.exercises.push({ name: '', sets: [{ reps: '', weight: '' }], notes: '' }); renderNewWorkoutForm(); });
+        
         document.getElementById('exercise-list').addEventListener('click', e => { 
             const card = e.target.closest('.card');
             if (!card) return;
@@ -1428,7 +1580,11 @@
                 renderNewWorkoutForm();
             }
             if (e.target.classList.contains('start-rest-btn')) {
-                startRestTimer(exIndex);
+                const currentSetIndex = newWorkout.exercises[exIndex].sets.length - 1;
+                if (currentSetIndex >= 0) {
+                    const timerIdPrefix = e.target.dataset.timerIdPrefix;
+                    startRepTimer(timerIdPrefix, currentSetIndex);
+                }
             }
         });
         document.getElementById('exercise-list').addEventListener('change', e => {
@@ -1449,7 +1605,7 @@
             }
 
             const weightKg = latestWeight * 0.453592;
-            const MET_VALUE = 6.0; // Vigorous weightlifting
+            const MET_VALUE = 6.0;
             const caloriesBurned = (MET_VALUE * weightKg * 3.5) / 200 * duration;
             
             const finalExercises = newWorkout.exercises.filter(ex => ex.name);
@@ -1459,7 +1615,6 @@
             }
 
             if (editingWorkoutTimestamp) {
-                // UPDATE logic
                 const workoutToUpdate = state.workouts.find(w => w.date === editingWorkoutTimestamp);
                 if (workoutToUpdate) {
                     workoutToUpdate.exercises = finalExercises;
@@ -1468,9 +1623,7 @@
                 }
                  alert('Workout updated!');
             } else {
-                // ⭐ MODIFIED ADD LOGIC FOR CALENDAR
                 const viewingKey = state.viewingWorkoutLogKey || getTodayKey();
-                // Combine the selected date with the current time to create a unique timestamp for that day
                 const newTimestamp = new Date(viewingKey + 'T' + new Date().toTimeString().split(' ')[0]).toISOString();
 
                 const workoutToSave = { 
@@ -1519,11 +1672,9 @@
             }
         });
 
-        // ⭐ NEW EVENT LISTENER FOR WORKOUT CALENDAR
         document.getElementById('workout-date-picker').addEventListener('change', (e) => {
             if (e.target.value) {
                 state.viewingWorkoutLogKey = e.target.value;
-                // If user is editing a workout and changes the date, cancel the edit to avoid confusion.
                 if (editingWorkoutTimestamp) {
                     resetWorkoutForm();
                 }
@@ -1538,7 +1689,7 @@
 
         programSelect.addEventListener('change', () => {
             const selectedProgram = programSelect.value;
-            daySelect.innerHTML = `<option value="">-- Select a Day --</option>`; // Reset
+            daySelect.innerHTML = `<option value="">-- Select a Day --</option>`;
             if (selectedProgram) {
                 daySelect.disabled = false;
                 const days = workoutPrograms[selectedProgram];
@@ -1599,8 +1750,18 @@
                 if (isNaN(workoutDate)) return false;
                 return workoutDate.toISOString().split('T')[0] === viewingKey;
             });
-            const caloriesBurned = workoutsForDay.reduce((sum, w) => sum + (Number(w.caloriesBurned) || 0), 0);
+            const workoutCalories = workoutsForDay.reduce((sum, w) => sum + (Number(w.caloriesBurned) || 0), 0);
             
+            const stepsForDay = state.stepsLog[viewingKey] || 0;
+            const stepCalories = calculateStepsCalories(stepsForDay);
+            
+            const stepsInput = document.getElementById('steps-walked-input');
+            if (stepsInput) stepsInput.value = stepsForDay > 0 ? stepsForDay : '';
+            const stepsCalsBurnedEl = document.getElementById('steps-calories-burned');
+            if (stepsCalsBurnedEl) stepsCalsBurnedEl.textContent = stepCalories;
+
+            const caloriesBurned = workoutCalories + stepCalories;
+
             document.getElementById('calorie-summary-goal').textContent = state.macros.calorieGoal;
             document.getElementById('calorie-summary-eaten').textContent = consumed.calories;
             document.getElementById('calorie-summary-burned').textContent = Math.round(caloriesBurned);
@@ -1641,14 +1802,12 @@
                 render();
             }
         });
-
-        document.getElementById('add-meal-form').addEventListener('submit', e => {
+		document.getElementById('add-meal-form').addEventListener('submit', e => {
             e.preventDefault();
             const viewingKey = state.viewingMealLogKey;
             if (!state.meals[viewingKey]) state.meals[viewingKey] = [];
 
             if (editingMealTimestamp) {
-                // UPDATE logic
                 const mealToUpdate = state.meals[viewingKey].find(m => m.timestamp === editingMealTimestamp);
                 if (mealToUpdate) {
                     mealToUpdate.name = document.getElementById('meal-name').value;
@@ -1658,7 +1817,6 @@
                     mealToUpdate.fats = document.getElementById('meal-fats').value;
                 }
             } else {
-                // ADD logic
                  const newTimestamp = new Date(viewingKey + 'T' + new Date().toTimeString().split(' ')[0]).toISOString();
                 const newMeal = { 
                     name: document.getElementById('meal-name').value, 
@@ -1691,7 +1849,6 @@
         document.getElementById('daily-meals-list').addEventListener('click', e => {
             const viewingKey = state.viewingMealLogKey;
 
-            // Handle DELETE
             if (e.target.classList.contains('delete-meal-btn')) {
                 const timestamp = e.target.dataset.timestamp;
                 if (confirm('Are you sure you want to delete this meal entry?')) {
@@ -1701,7 +1858,6 @@
                 }
             }
 
-            // Handle EDIT
             if (e.target.classList.contains('edit-meal-btn')) {
                 const timestamp = e.target.dataset.timestamp;
                 const mealToEdit = state.meals[viewingKey].find(m => m.timestamp === timestamp);
@@ -1720,6 +1876,18 @@
             }
         });
 
+        document.getElementById('save-steps-btn').addEventListener('click', () => {
+            const viewingKey = state.viewingMealLogKey;
+            const stepsInput = document.getElementById('steps-walked-input');
+            const steps = parseInt(stepsInput.value, 10) || 0;
+
+            if (!state.stepsLog) state.stepsLog = {};
+            state.stepsLog[viewingKey] = steps;
+            
+            saveState();
+            render();
+            alert('Steps saved!');
+        });
 
         function renderMacros() {
             const statsAreSet = state.user.age && state.user.height && state.progress.length > 0;
@@ -1756,8 +1924,8 @@
         }
 
         function estimateCalories() {
-            const { age, gender, height } = state.user; // height in inches
-            const latestWeight = state.progress.length > 0 ? state.progress[state.progress.length - 1].weight : null; // weight in lbs
+            const { age, gender, height } = state.user;
+            const latestWeight = state.progress.length > 0 ? state.progress[state.progress.length - 1].weight : null;
             if (!age || !gender || !height || !latestWeight) {
                 alert('Please go to Settings to set your Age, Gender, Height, and log your current Weight in the Progress tab.');
                 return;
@@ -2120,25 +2288,22 @@ const I18N_MAP = {
 
 function applyTranslations(lang) {
   if (lang !== 'es') {
-    // Restore original English by reloading from original strings stored once
     if (window.__ORIG_TEXT__) {
       for (const [el, txt] of window.__ORIG_TEXT__) el.textContent = txt;
     }
     return;
   }
   if (!window.__ORIG_TEXT__) {
-    // Save original visible texts (one-time)
     window.__ORIG_TEXT__ = [];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null);
     let node;
     while ((node = walker.nextNode())) {
-      if (node.firstElementChild) continue; // likely a container; we'll rely on leaf nodes
+      if (node.firstElementChild) continue;
       const txt = (node.textContent || '').trim();
       if (!txt) continue;
       window.__ORIG_TEXT__.push([node, node.textContent]);
     }
   }
-  // Translate leaf elements whose trimmed text has a mapping
   window.__ORIG_TEXT__.forEach(([el, original]) => {
     const key = original.trim();
     if (I18N_MAP[key]) {
@@ -2146,13 +2311,11 @@ function applyTranslations(lang) {
     }
   });
 }
-// Initialize dropdown from saved pref and translate on load
 const langSelect = document.getElementById('setting-language');
 let savedLang = localStorage.getItem('appLang') || 'en';
 if (langSelect) langSelect.value = savedLang;
 applyTranslations(savedLang);
 
-// Update on save settings OR when user changes dropdown
 if (langSelect) {
   langSelect.addEventListener('change', () => {
     const val = langSelect.value;
@@ -2161,7 +2324,6 @@ if (langSelect) {
   });
 }
 
-// Also hook Save Settings button to enforce translation immediately after saving
 const saveBtn = document.getElementById('save-settings-btn');
 if (saveBtn) {
   saveBtn.addEventListener('click', () => {
@@ -2170,7 +2332,6 @@ if (saveBtn) {
     applyTranslations(val);
   });
 }
-/* ====== End i18n block ====== */
 });
     </script>
 </body>
