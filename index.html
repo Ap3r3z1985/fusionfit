@@ -471,6 +471,106 @@
             color: var(--accent-color);
         }
         
+        /* --- NEW styles for compact workout form --- */
+        .exercise-card {
+            border-left: 3px solid var(--accent-color);
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: var(--bg-color); 
+        }
+
+        .exercise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .exercise-name-input {
+            flex-grow: 1;
+            font-size: 1.2em;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+            padding: 5px;
+            margin-right: 10px;
+            color: var(--heading-color);
+        }
+        .exercise-name-input:focus {
+            box-shadow: none;
+            background-color: var(--border-color);
+        }
+
+        .delete-exercise-btn {
+            padding: 5px 10px;
+            font-size: 0.8em;
+            background: #a94442; /* A red delete button */
+            min-width: 30px; 
+        }
+
+        .sets-grid {
+            display: grid;
+            grid-template-columns: 0.5fr 1fr 1fr 0.5fr; /* Set# | Weight | Reps | Del */
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .sets-grid-header {
+            font-weight: 600;
+            font-size: 0.8em;
+            opacity: 0.8;
+            text-align: center;
+        }
+
+        .set-row {
+            /* This makes the div's children act as direct children of the grid */
+            display: contents; 
+        }
+
+        .set-row > * {
+            text-align: center;
+        }
+
+        .set-number {
+            font-weight: bold;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .set-input {
+            width: 100%;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .delete-set-btn {
+            background: none;
+            border: none;
+            color: #a94442;
+            cursor: pointer;
+            font-size: 1.5em;
+            font-weight: bold;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .exercise-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .exercise-actions button {
+            flex: 1;
+        }
+
+        .exercise-notes-textarea {
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -1498,26 +1598,41 @@
         }
 
         function renderNewWorkoutForm() {
-            document.getElementById('exercise-list').innerHTML = newWorkout.exercises.map((ex, i) => {
-                const timerId = `rep-timer-${i}`;
+            const exerciseListContainer = document.getElementById('exercise-list');
+            exerciseListContainer.innerHTML = newWorkout.exercises.map((ex, exIndex) => {
                 
-                return `<div class="card" data-ex-index="${i}" style="border-left:3px solid var(--accent-color);">
-                            <input type="text" class="exercise-name" value="${ex.name||''}" placeholder="Exercise Name" list="exercise-suggestions">
-                            <div class="sets-container">
-                                ${ex.sets.map((s,si) => `
-                                    <div class="form-group" data-set-index="${si}">
-                                        Set ${si+1}: 
-                                        <input type="number" class="reps" value="${s.reps||''}" placeholder="Reps"> x 
-                                        <input type="number" class="weight" value="${s.weight||''}" placeholder="Weight (lbs)">
-                                        <span class="rep-timer" id="${timerId}-${si}"></span>
-                                    </div>`).join('')}
-                            </div>
-                            <div style="display:flex; gap:10px;">
-                                <button class="add-set-btn secondary" style="flex:1;">Add Set</button>
-                                <button class="start-rest-btn secondary" style="flex:1;" data-timer-id-prefix="${timerId}">Start 60s Rest</button>
-                            </div>
-                            <textarea class="exercise-notes" placeholder="Notes">${ex.notes||''}</textarea>
-                        </div>`;
+                // Generate the HTML for each set row
+                const setsHtml = ex.sets.map((s, setIndex) => `
+                    <div class="set-row" data-set-index="${setIndex}">
+                        <span class="set-number">${setIndex + 1}</span>
+                        <input type="number" class="weight set-input" value="${s.weight || ''}" placeholder="lbs">
+                        <input type="number" class="reps set-input" value="${s.reps || ''}" placeholder="reps">
+                        <button type="button" class="delete-set-btn" title="Delete Set">&times;</button>
+                    </div>
+                `).join('');
+
+                // The full card for one exercise
+                return `
+                <div class="card exercise-card" data-ex-index="${exIndex}">
+                    <div class="exercise-header">
+                        <input type="text" class="exercise-name-input" value="${ex.name || ''}" placeholder="Exercise Name" list="exercise-suggestions">
+                        <button type="button" class="delete-exercise-btn secondary">X</button>
+                    </div>
+
+                    <div class="sets-grid">
+                        <div class="sets-grid-header">Set</div>
+                        <div class="sets-grid-header">Weight</div>
+                        <div class="sets-grid-header">Reps</div>
+                        <div></div> ${setsHtml}
+                    </div>
+                    
+                    <textarea class="exercise-notes-textarea" placeholder="Notes (e.g., focus on form, tempo, etc.)">${ex.notes || ''}</textarea>
+
+                    <div class="exercise-actions">
+                        <button type="button" class="add-set-btn secondary">Add Set</button>
+                        </div>
+                </div>
+                `;
             }).join('');
         }
         
@@ -1563,14 +1678,17 @@
 
         document.getElementById('add-exercise-btn').addEventListener('click', () => { newWorkout.exercises.push({ name: '', sets: [{ reps: '', weight: '' }], notes: '' }); renderNewWorkoutForm(); });
         
+        // --- REPLACEMENT for exercise-list event listeners ---
         document.getElementById('exercise-list').addEventListener('click', e => { 
-            const card = e.target.closest('.card');
+            const card = e.target.closest('.exercise-card');
             if (!card) return;
             const exIndex = parseInt(card.dataset.exIndex, 10);
 
+            // Handle Add Set button
             if (e.target.classList.contains('add-set-btn')) {
                 const sets = newWorkout.exercises[exIndex].sets;
                 let newReps = '', newWeight = '';
+                // Pre-fill with values from the last set for convenience
                 if (sets.length > 0) {
                     const lastSet = sets[sets.length - 1];
                     newReps = lastSet.reps;
@@ -1579,18 +1697,56 @@
                 sets.push({ reps: newReps, weight: newWeight });
                 renderNewWorkoutForm();
             }
-            if (e.target.classList.contains('start-rest-btn')) {
-                const currentSetIndex = newWorkout.exercises[exIndex].sets.length - 1;
-                if (currentSetIndex >= 0) {
-                    const timerIdPrefix = e.target.dataset.timerIdPrefix;
-                    startRepTimer(timerIdPrefix, currentSetIndex);
+
+            // Handle Delete Set button
+            if (e.target.classList.contains('delete-set-btn')) {
+                const setRow = e.target.closest('.set-row');
+                if (setRow) {
+                    const setIndex = parseInt(setRow.dataset.setIndex, 10);
+                    // Prevent deleting the last set
+                    if (newWorkout.exercises[exIndex].sets.length > 1) {
+                        newWorkout.exercises[exIndex].sets.splice(setIndex, 1);
+                        renderNewWorkoutForm();
+                    } else {
+                        alert("Each exercise must have at least one set.");
+                    }
+                }
+            }
+
+            // Handle Delete Exercise button
+            if (e.target.classList.contains('delete-exercise-btn')) {
+                if (confirm(`Are you sure you want to remove ${newWorkout.exercises[exIndex].name || 'this exercise'}?`)) {
+                    newWorkout.exercises.splice(exIndex, 1);
+                    renderNewWorkoutForm();
                 }
             }
         });
-        document.getElementById('exercise-list').addEventListener('change', e => {
-            const card = e.target.closest('.card'); if (!card) return; const i = card.dataset.exIndex; const ex = newWorkout.exercises[i];
-            if (e.target.classList.contains('exercise-name')) ex.name = e.target.value; if (e.target.classList.contains('exercise-notes')) ex.notes = e.target.value;
-            if (e.target.classList.contains('reps') || e.target.classList.contains('weight')) { const si = e.target.closest('.form-group').dataset.setIndex; const set = ex.sets[si]; if (e.target.classList.contains('reps')) set.reps = e.target.value; if (e.target.classList.contains('weight')) set.weight = e.target.value; }
+
+        document.getElementById('exercise-list').addEventListener('input', e => {
+            const card = e.target.closest('.exercise-card'); 
+            if (!card) return; 
+            const exIndex = parseInt(card.dataset.exIndex, 10);
+            const ex = newWorkout.exercises[exIndex];
+            
+            if (e.target.classList.contains('exercise-name-input')) {
+                ex.name = e.target.value;
+            }
+            if (e.target.classList.contains('exercise-notes-textarea')) {
+                ex.notes = e.target.value;
+            }
+            if (e.target.classList.contains('reps') || e.target.classList.contains('weight')) { 
+                const setRow = e.target.closest('.set-row');
+                if (setRow) {
+                    const setIndex = parseInt(setRow.dataset.setIndex, 10);
+                    const set = ex.sets[setIndex]; 
+                    if (e.target.classList.contains('reps')) {
+                        set.reps = e.target.value; 
+                    }
+                    if (e.target.classList.contains('weight')) {
+                        set.weight = e.target.value; 
+                    }
+                }
+            }
         });
 		document.getElementById('save-workout-btn').addEventListener('click', () => {
             const duration = parseInt(document.getElementById('workout-duration').value, 10) || 0;
@@ -2279,7 +2435,7 @@ const I18N_MAP = {
   "Data Management":"Gestión de datos",
   "Backup or restore all your app data.":"Haz copia de seguridad o restaura todos tus datos de la app.",
   "Export Data":"Exportar datos",
-  "Import Data":"Importar datos",
+   "Import Data":"Importar datos",
   "Feedback & Support":"Comentarios y soporte",
   "Have a bug to report or an idea for a new feature? Let us know!":"¿Tienes un error o una idea de función? ¡Cuéntanos!",
   "Submit Feedback":"Enviar comentarios",
